@@ -35,7 +35,10 @@ jobs:
 
             // 3. Setup variables
             let rawName = nameMatch[1].trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-            // NOTE: You can apply a prefix if you want like this: const repoName = `plugin-${rawName}`;
+            // NOTE:
+            // You can apply a prefix if you want like this: 
+            // const repoName = `plugin-${rawName}`;
+            const repoName = `${rawName}`;
             const desc = descMatch ? descMatch[1].trim() : "Community Plugin";
             const requester = context.payload.issue.user.login;
 
