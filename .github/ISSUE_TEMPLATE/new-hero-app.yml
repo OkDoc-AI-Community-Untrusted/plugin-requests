@@ -6,13 +6,16 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for building in the Blahok ecosystem! Submit this form to instantly generate a repository where you have Maintainer access.
+        Thanks for building in the OkDoc.AI ecosystem! Submit this form to request a new repository for your hero app.
+
+        > ⚠️ **Important:** Do **not** include "Hero", "Hero App", or "hero-app" in your repository name.
+        > The suffix is automatically appended. For example, if you enter `my-awesome-tool`, the repo will be created as `my-awesome-tool-hero-app`.
   - type: input
     id: hero-app-name
     attributes:
       label: "Desired Repository Name"
-      description: "Must use lowercase letters and hyphens only (e.g., ai-voice-wrapper). We will automatically prefix this with our prefix."
-      placeholder: "my-awesome-hero-app"
+      description: "Lowercase letters and hyphens only (e.g., ai-voice-wrapper). Do NOT include 'hero-app' — it is automatically appended as a suffix."
+      placeholder: "my-awesome-tool"
     validations:
       required: true
   - type: textarea

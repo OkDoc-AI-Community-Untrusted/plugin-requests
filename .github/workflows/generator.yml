@@ -19,13 +19,19 @@ jobs:
 
       - name: Execute Creation & Invite
         uses: actions/github-script@v7
+        env:
+          # ── Repository variables (Settings → Secrets and variables → Actions → Variables) ──
+          # REPO_SUFFIX        : suffix appended to every repo name, e.g. "-hero-app"
+          # REPO_TITLE_SUFFIX  : human-readable suffix for descriptions, e.g. "Hero App"
+          # GRANT_MAINTAINER_ACCESS : "true" to invite requester as Maintainer, "false" to skip
+          REPO_SUFFIX: ${{ vars.REPO_SUFFIX }}
+          REPO_TITLE_SUFFIX: ${{ vars.REPO_TITLE_SUFFIX }}
+          GRANT_MAINTAINER_ACCESS: ${{ vars.GRANT_MAINTAINER_ACCESS }}
         with:
           github-token: ${{ steps.generate-token.outputs.token }}
           script: |
-            // 1. Grab the raw body of the issue
+            // ── 1. Parse issue body ──
             const body = context.payload.issue.body;
-
-            // 2. Parse the fields natively using Regex
             const nameMatch = body.match(/### Desired Repository Name\s+([^\r\n]+)/);
             const descMatch = body.match(/### Short Description\s+([\s\S]+?)(?=###|$)/);
 
@@ -33,52 +39,128 @@ jobs:
               throw new Error("Repository name was missing or could not be parsed from the issue form.");
             }
 
-            // 3. Setup variables
-            let rawName = nameMatch[1].trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-            // NOTE:
-            // You can apply a prefix if you want like this: 
-            // const repoName = `hero-app-${rawName}`;
-            const repoName = `${rawName}`;
-            const desc = descMatch ? descMatch[1].trim() : "Community Hero App";
             const requester = context.payload.issue.user.login;
+            let rawName = nameMatch[1].trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
 
-            try {
-              // 4. Create the Repository
-              await github.rest.repos.createInOrg({
-                org: context.repo.owner,
-                name: repoName,
-                description: desc,
-                private: false,
-                has_issues: true,
-                auto_init: true
-              });
-              
-              // 5. Invite the user as a Maintainer
-              await github.rest.repos.addCollaborator({
-                owner: context.repo.owner,
-                repo: repoName,
-                username: requester,
-                permission: 'maintain'
-              });
-              
-              // 6. Comment on the issue with a success message
+            // ── 2. Validate: name must NOT contain "hero" or "hero-app" ──
+            if (/hero[-\s]?app/i.test(rawName) || /\bhero\b/i.test(rawName)) {
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: `### 🎉 Success!\n\nHey @${requester}, your repository has been created!\n\n🔗 **Link:** [${repoName}](https://github.com/${context.repo.owner}/${repoName})\n\nCheck your email or your GitHub notifications for the repository invitation. Once you accept, you can start pushing code. Happy building! 🚀`
+                body: [
+                  `❌ **Invalid repository name**`,
+                  ``,
+                  `Hey @${requester}, your requested name \`${rawName}\` contains "hero" or "hero-app".`,
+                  `Please do **not** include these words — the suffix is automatically appended.`,
+                  ``,
+                  `Please open a new issue with a corrected name.`
+                ].join('\n')
               });
-              
-              // 7. Close the issue
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                state: 'closed',
+                state_reason: 'not_planned'
+              });
+              return;
+            }
+
+            // ── 3. Build repo name & description from variables ──
+            const repoSuffix      = process.env.REPO_SUFFIX || '-hero-app';
+            const repoTitleSuffix  = process.env.REPO_TITLE_SUFFIX || 'Hero App';
+            const grantAccess      = (process.env.GRANT_MAINTAINER_ACCESS || 'true').toLowerCase() === 'true';
+
+            const repoName = `${rawName}${repoSuffix}`;
+            const desc     = descMatch ? descMatch[1].trim() : `Community ${repoTitleSuffix}`;
+
+            try {
+              // ── 4. Create the repository ──
+              await github.rest.repos.createInOrg({
+                org: context.repo.owner,
+                name: repoName,
+                description: `${desc} — OkDoc.AI Community ${repoTitleSuffix}`,
+                private: false,
+                has_issues: true,
+                auto_init: true
+              });
+
+              // ── 5. Conditionally grant maintainer access ──
+              if (grantAccess) {
+                await github.rest.repos.addCollaborator({
+                  owner: context.repo.owner,
+                  repo: repoName,
+                  username: requester,
+                  permission: 'maintain'
+                });
+
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: [
+                    `### 🎉 Success!`,
+                    ``,
+                    `Hey @${requester}, your repository has been created!`,
+                    ``,
+                    `🔗 **Link:** [${repoName}](https://github.com/${context.repo.owner}/${repoName})`,
+                    ``,
+                    `Check your email or GitHub notifications for the **Maintainer** invitation.`,
+                    `Once you accept, you can start pushing code directly. Happy building! 🚀`
+                  ].join('\n')
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: [
+                    `### 🎉 Repository Created!`,
+                    ``,
+                    `Hey @${requester}, your repository has been created!`,
+                    ``,
+                    `🔗 **Link:** [${repoName}](https://github.com/${context.repo.owner}/${repoName})`,
+                    ``,
+                    `---`,
+                    ``,
+                    `**📋 Next Steps — Fork & Pull Request Workflow**`,
+                    ``,
+                    `Direct push access is not enabled for this repository.`,
+                    `You will contribute via the standard fork workflow:`,
+                    ``,
+                    `1. **Fork** the repo — click the **Fork** button on the repo page.`,
+                    `2. **Clone** your fork:`,
+                    `   \`\`\`bash`,
+                    `   git clone https://github.com/${requester}/${repoName}.git`,
+                    `   cd ${repoName}`,
+                    `   \`\`\``,
+                    `3. **Create a branch**, make changes, and push:`,
+                    `   \`\`\`bash`,
+                    `   git checkout -b my-feature`,
+                    `   # ... make your changes ...`,
+                    `   git add . && git commit -m "Initial hero app code"`,
+                    `   git push origin my-feature`,
+                    `   \`\`\``,
+                    `4. **Open a Pull Request** from your fork back to \`${context.repo.owner}/${repoName}\`.`,
+                    `5. A maintainer will review and merge your changes.`,
+                    ``,
+                    `> **Need direct access later?** Open a new issue in this repository requesting Maintainer access to \`${repoName}\`.`,
+                    ``,
+                    `Happy building! 🚀`
+                  ].join('\n')
+                });
+              }
+
+              // ── 6. Close the issue ──
               await github.rest.issues.update({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
                 state: 'closed'
               });
-              
+
             } catch (error) {
-              // Since we fixed the App permissions, this error comment will now actually post!
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
