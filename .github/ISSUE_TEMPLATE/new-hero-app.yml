@@ -1,25 +1,25 @@
-name: "🚀 Request a OkDoc.AI Community Plugin Repository"
-description: "Automatically generate a new repository to host your OkDoc.AI plugin."
-title: "[Plugin]: <Enter your plugin name>"
-labels: ["plugin-request"]
+name: "🚀 Request a OkDoc.AI Community Hero App Repository"
+description: "Automatically generate a new repository to host your OkDoc.AI hero app."
+title: "[Hero App]: <Enter your hero app name>"
+labels: ["hero-app-request"]
 body:
   - type: markdown
     attributes:
       value: |
         Thanks for building in the Blahok ecosystem! Submit this form to instantly generate a repository where you have Maintainer access.
   - type: input
-    id: plugin-name
+    id: hero-app-name
     attributes:
       label: "Desired Repository Name"
       description: "Must use lowercase letters and hyphens only (e.g., ai-voice-wrapper). We will automatically prefix this with our prefix."
-      placeholder: "my-awesome-plugin"
+      placeholder: "my-awesome-hero-app"
     validations:
       required: true
   - type: textarea
     id: description
     attributes:
       label: "Short Description"
-      description: "What does this plugin do?"
-      placeholder: "A plugin that connects OkDoc.AI to..."
+      description: "What does this hero app do?"
+      placeholder: "A hero app that connects OkDoc.AI to..."
     validations:
       required: true

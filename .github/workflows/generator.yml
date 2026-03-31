@@ -1,4 +1,4 @@
-name: Generate Plugin Repository
+name: Generate Hero App Repository
 
 on:
   issues:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-repo:
-    if: contains(github.event.issue.labels.*.name, 'plugin-request')
+    if: contains(github.event.issue.labels.*.name, 'hero-app-request')
     runs-on: ubuntu-latest
     steps:
       - name: Generate Secure Token
@@ -37,9 +37,9 @@ jobs:
             let rawName = nameMatch[1].trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
             // NOTE:
             // You can apply a prefix if you want like this: 
-            // const repoName = `plugin-${rawName}`;
+            // const repoName = `hero-app-${rawName}`;
             const repoName = `${rawName}`;
-            const desc = descMatch ? descMatch[1].trim() : "Community Plugin";
+            const desc = descMatch ? descMatch[1].trim() : "Community Hero App";
             const requester = context.payload.issue.user.login;
 
             try {
